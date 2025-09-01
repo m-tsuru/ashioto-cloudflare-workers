@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ashioto-cloudflare-workers",
+  "compatibility_date": "2025-08-03",
+  "main": "./src/index.tsx",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ashioto",
+      "database_id": "6cf9fed2-ee13-4c83-8a04-84ae76c5793e",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "vars": {
+    "JWT_SECRET": "your-jwt-secret-key-change-this-in-production"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
