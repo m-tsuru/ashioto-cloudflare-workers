@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { setCookie, getCookie } from 'hono/cookie'
-import { sign, verify } from 'hono/jwt'
-import { eq } from 'drizzle-orm'
-import { users } from '../db/schema'
+import { jwt, sign, verify } from 'hono/jwt'
+import { eq, and, gte, lte, sql, inArray } from 'drizzle-orm'
+import { ashioto, landmarks, users } from '../db/schema'
 import { createDb } from '../db/db'
 import 'dotenv/config';
 
@@ -32,6 +32,27 @@ const client_id = process.env.SPOTIFY_CLIENT_ID ?? ''
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET ?? ''
 const scope = process.env.SPOTIFY_SCOPE ?? ''
 const state = process.env.SPOTIFY_REDIRECT_STATE ?? ''
+
+const jwtAuth = async (c, next) => {
+  const sessionToken = getCookie(c, 'session')
+  const jwtSecret = c.env.JWT_SECRET || 'fallback-secret'
+
+  if (!sessionToken) {
+    return c.json({ error: 'Unauthorized' }, 403)
+  }
+
+  try {
+    const payload = await verify(sessionToken, jwtSecret)
+    if (!payload || !payload.spotifyId) {
+      return c.json({ error: 'Unauthorized' }, 403)
+    }
+    // 認証OKなら次へ
+    c.set('user', payload)
+    await next()
+  } catch {
+    return c.json({ error: 'Unauthorized' }, 403)
+  }
+}
 
 api.get('/auth/login', (c) => {
 const url = new URL(c.req.url);
@@ -153,7 +174,7 @@ api.get('/auth/callback', async (c) => {
   }
 })
 
-api.get('/auth/me', async (c) => {
+api.get('/auth/me', jwtAuth, async (c) => {
   try {
     // Cookieからセッショントークンを取得
     const sessionToken = getCookie(c, 'session')
@@ -332,6 +353,111 @@ api.get('/spotify/refresh', async (c) => {
     }
     return c.json({ error: 'Failed to refresh Spotify token' }, 500)
   }
+})
+
+api.get('/location/search', jwtAuth, async (c) => {
+  const lat = c.req.query('lat')
+  const lon = c.req.query('lon')
+  // const query = c.req.query('query') || 'レストラン'
+  const dist = c.req.query('dist') || '1'           // 指定がない場合は半径1kmを検索
+
+  // 2. 緯度・経度が指定されているかバリデーション
+  if (!lat || !lon) {
+    return c.json({ error: '緯度(lat)と経度(lon)は必須です。' }, 400)
+  }
+
+  const YAHOO_APP_ID = process.env.YOLP_ID
+  if (!YAHOO_APP_ID) {
+    console.error('環境変数 YAHOO_APP_ID が設定されていません。')
+    return c.json({ error: 'サーバーの設定エラーです。' }, 500)
+  }
+
+  const params = new URLSearchParams({
+    appid: YAHOO_APP_ID,
+    lat: lat,
+    lon: lon,
+    dist: dist,
+    // query: query,
+    output: 'json', // レスポンスをJSON形式で受け取る
+    sort: 'geo',     // 距離が近い順でソートする
+    results: '3'    // 最大3件取得する
+  })
+  const url = `https://map.yahooapis.jp/search/local/V1/localSearch?${params.toString()}`
+
+  try {
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`APIリクエストに失敗しました: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json() as { Feature?: any[] }
+
+    const features = data.Feature || []
+    const results = features.map((item: any) => {
+      // 座標は "経度,緯度" の文字列で返ってくるため分割する
+      const [itemLon, itemLat] = item.Geometry.Coordinates.split(',')
+
+      return {
+        gid: item.Gid,
+        name: item.Name,
+        // address: item.Property.Address,
+        // yomi: item.Property.Yomi,
+        // tel: item.Property.Tel1,
+       genre: item.Property.Genre?.map((g: any) => g.Name) || [],
+        geo: {
+          lat: parseFloat(itemLat),
+          lon: parseFloat(itemLon),
+        },
+      }
+    })
+
+    // 7. 整形したデータをクライアントに返す
+    return c.json(results)
+
+  } catch (error) {
+    console.error('APIリクエスト中にエラーが発生しました:', error)
+    return c.json({ error: 'データの取得に失敗しました。' }, 502) // 502 Bad Gateway
+  }
+})
+
+api.get('/ashioto/', jwtAuth, async (c) => {
+    const db = createDb(c.env.DB)
+
+    // 緯度・経度範囲に存在する `ashioto` データを取得する
+    const lat0 = Number(c.req.query('lat0'))
+    const lon0 = Number(c.req.query('lon0'))
+    const lat1 = Number(c.req.query('lat1'))
+    const lon1 = Number(c.req.query('lon1'))
+
+    const latestAshiotoIds = await db
+    .select({ id: ashioto.id })
+    .from(ashioto)
+    .innerJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+    .where(
+        and(
+        gte(landmarks.latitude, lat0),
+        lte(landmarks.latitude, lat1),
+        gte(landmarks.longitude, lon0),
+        lte(landmarks.longitude, lon1)
+        )
+    )
+    .groupBy(ashioto.landmarkId)
+    .having(sql`timestamp = MAX(timestamp)`);
+
+    // そのIDで ashioto レコードを取得
+    const latestAshiotoRecords = await db
+    .select()
+    .from(ashioto)
+    .where(
+        inArray(ashioto.id, latestAshiotoIds.map(row => row.id))
+    );
+
+    return c.json(latestAshiotoRecords)
+})
+
+api.post('/ashioto/', jwtAuth, async (c) => {
+
 })
 
 export default api

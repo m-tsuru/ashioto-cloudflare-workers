@@ -35,3 +35,7 @@ lerna-debug.log*
 
 # drizzle
 drizzle/**
+
+# wrangler
+
+wrangler.jsonc
