@@ -363,13 +363,13 @@ api.get('/location/search', jwtAuth, async (c) => {
 
   // 2. 緯度・経度が指定されているかバリデーション
   if (!lat || !lon) {
-    return c.json({ error: '緯度(lat)と経度(lon)は必須です。' }, 400)
+    return c.json({ error: 'Required Parameters `lon` and `lat`' }, 400)
   }
 
   const YAHOO_APP_ID = process.env.YOLP_ID
   if (!YAHOO_APP_ID) {
-    console.error('環境変数 YAHOO_APP_ID が設定されていません。')
-    return c.json({ error: 'サーバーの設定エラーです。' }, 500)
+    console.error('Unsetted Environment Variable: `YAHOO_APP_ID` ')
+    return c.json({ error: 'Server configuration error.' }, 500)
   }
 
   const params = new URLSearchParams({
@@ -416,8 +416,8 @@ api.get('/location/search', jwtAuth, async (c) => {
     return c.json(results)
 
   } catch (error) {
-    console.error('APIリクエスト中にエラーが発生しました:', error)
-    return c.json({ error: 'データの取得に失敗しました。' }, 502) // 502 Bad Gateway
+    console.error('Unexpected Error when fetching API:', error)
+    return c.json({ error: 'Failed to retrieve data.' }, 502) // 502 Bad Gateway
   }
 })
 

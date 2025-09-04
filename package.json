@@ -19,7 +19,8 @@
     "hono": "^4.9.5",
     "jsonwebtoken": "^9.0.2",
     "jwt": "^0.2.0",
-    "svelte": "^5.38.6"
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.2",
