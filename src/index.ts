@@ -17,5 +17,6 @@ app.use(
 )
 
 app.route('/api', api)
+app.route('/', frontend)
 
 export default app

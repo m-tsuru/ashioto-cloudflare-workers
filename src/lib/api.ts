@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { setCookie, getCookie } from 'hono/cookie'
 import { jwt, sign, verify } from 'hono/jwt'
 import { eq, and, gte, lte, sql, inArray } from 'drizzle-orm'
-import { ashioto, landmarks, users } from '../db/schema'
+import { ashioto, landmarks, users, tracks } from '../db/schema'
 import { createDb } from '../db/db'
 import 'dotenv/config';
 
@@ -47,14 +47,14 @@ const jwtAuth = async (c, next) => {
       return c.json({ error: 'Unauthorized' }, 403)
     }
     // 認証OKなら次へ
-    c.set('user', payload)
+    c.set('jwtPayload', payload)
     await next()
   } catch {
     return c.json({ error: 'Unauthorized' }, 403)
   }
 }
 
-api.get('/auth/login', (c) => {
+api.get('/auth', (c) => {
 const url = new URL(c.req.url);
   const domain = url.origin;
   const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${client_id}&redirect_uri=${domain}${redirect_uri_path}&scope=${scope}&state=${state}`
@@ -153,20 +153,14 @@ api.get('/auth/callback', async (c) => {
     // セッションCookieを設定
     setCookie(c, 'session', token, {
       httpOnly: true,
-      secure: true,
+      secure: false, // 開発環境ではfalse
       sameSite: 'Lax',
       maxAge: 60 * 60 * 24 * 7, // 7日間
       path: '/'
     })
 
-    return c.json({
-      message: 'Authentication successful',
-      user: {
-        spotifyId: userData.id,
-        displayName: userData.display_name || userData.id,
-        profileImageUrl: userData.images?.[0]?.url || null
-      }
-    })
+    // 認証成功後、フロントエンドページにリダイレクト
+    return c.redirect('/')
 
   } catch (error) {
     console.error('Authentication error:', error)
@@ -176,57 +170,28 @@ api.get('/auth/callback', async (c) => {
 
 api.get('/auth/me', jwtAuth, async (c) => {
   try {
-    // Cookieからセッショントークンを取得
-    const sessionToken = getCookie(c, 'session')
-
-    if (!sessionToken) {
-      return c.json({ error: 'No session found' }, 401)
-    }
-
-    const jwtSecret = c.env.JWT_SECRET || 'fallback-secret'
-
-    // JWTトークンを検証してペイロードを取得
-    const payload = await verify(sessionToken, jwtSecret)
-
-    if (!payload || !payload.spotifyId) {
-      return c.json({ error: 'Invalid session token' }, 401)
-    }
-
-    // データベースから最新のユーザー情報を取得
+    const user = c.get('jwtPayload') as any
     const db = createDb(c.env.DB)
-    const user = await db
+
+    const userRecord = await db
       .select({
         spotifyId: users.spotifyId,
         displayName: users.displayName,
-        profileImageUrl: users.profileImageUrl,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt
+        avatarUrl: users.profileImageUrl,
       })
       .from(users)
-      .where(eq(users.spotifyId, payload.spotifyId as string))
+      .where(eq(users.spotifyId, user.spotifyId))
       .get()
 
-    if (!user) {
+    if (!userRecord) {
       return c.json({ error: 'User not found' }, 404)
     }
 
-    return c.json({
-      user: {
-        spotifyId: user.spotifyId,
-        displayName: user.displayName,
-        profileImageUrl: user.profileImageUrl,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
-    })
+    return c.json(userRecord)
 
   } catch (error) {
-    console.error('Auth me error:', error)
-    // JWTの検証に失敗した場合
-    if (error instanceof Error && error.message.includes('JWT')) {
-      return c.json({ error: 'Invalid or expired session' }, 401)
-    }
-    return c.json({ error: 'Authentication failed' }, 500)
+    console.error('User fetch error:', error)
+    return c.json({ error: 'Failed to fetch user' }, 500)
   }
 })
 
@@ -421,10 +386,67 @@ api.get('/location/search', jwtAuth, async (c) => {
   }
 })
 
-api.get('/ashioto/', jwtAuth, async (c) => {
+api.get('/ashioto', jwtAuth, async (c) => {
     const db = createDb(c.env.DB)
 
-    // 緯度・経度範囲に存在する `ashioto` データを取得する
+    // lat/lon/radius形式のクエリパラメータをチェック
+    const lat = Number(c.req.query('lat'))
+    const lon = Number(c.req.query('lon'))
+    const radius = Number(c.req.query('radius')) || 1000 // デフォルト1km
+
+    if (!isNaN(lat) && !isNaN(lon)) {
+        // 緯度・経度から範囲を計算（簡易的な実装）
+        const latDelta = radius / 111000 // 1度≈111km
+        const lonDelta = radius / (111000 * Math.cos(lat * Math.PI / 180))
+
+        const lat0 = lat - latDelta
+        const lat1 = lat + latDelta
+        const lon0 = lon - lonDelta
+        const lon1 = lon + lonDelta
+
+        const latestAshiotoIds = await db
+        .select({ id: ashioto.id })
+        .from(ashioto)
+        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(
+            and(
+                gte(landmarks.latitude, lat0),
+                lte(landmarks.latitude, lat1),
+                gte(landmarks.longitude, lon0),
+                lte(landmarks.longitude, lon1)
+            )
+        )
+        .orderBy(ashioto.timestamp)
+        .limit(100)
+
+        const latestAshiotoRecords = await db
+        .select({
+            id: ashioto.id,
+            userId: ashioto.userId,
+            userName: users.displayName,
+            userAvatar: users.profileImageUrl,
+            trackName: tracks.trackName,
+            artistName: tracks.artistName,
+            albumName: tracks.albumName,
+            albumCover: tracks.albumImageUrl,
+            comment: ashioto.comment,
+            createdAt: ashioto.timestamp,
+            latitude: landmarks.latitude,
+            longitude: landmarks.longitude,
+            locationName: landmarks.name,
+        })
+        .from(ashioto)
+        .leftJoin(users, eq(ashioto.userId, users.spotifyId))
+        .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
+        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(
+            inArray(ashioto.id, latestAshiotoIds.map(row => row.id))
+        );
+
+        return c.json(latestAshiotoRecords)
+    }
+
+    // 元の緯度・経度範囲指定方式
     const lat0 = Number(c.req.query('lat0'))
     const lon0 = Number(c.req.query('lon0'))
     const lat1 = Number(c.req.query('lat1'))
@@ -447,8 +469,25 @@ api.get('/ashioto/', jwtAuth, async (c) => {
 
     // そのIDで ashioto レコードを取得
     const latestAshiotoRecords = await db
-    .select()
+    .select({
+        id: ashioto.id,
+        userId: ashioto.userId,
+        userName: users.displayName,
+        userAvatar: users.profileImageUrl,
+        trackName: tracks.trackName,
+        artistName: tracks.artistName,
+        albumName: tracks.albumName,
+        albumCover: tracks.albumImageUrl,
+        comment: ashioto.comment,
+        createdAt: ashioto.timestamp,
+        latitude: landmarks.latitude,
+        longitude: landmarks.longitude,
+        locationName: landmarks.name,
+    })
     .from(ashioto)
+    .leftJoin(users, eq(ashioto.userId, users.spotifyId))
+    .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
+    .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
     .where(
         inArray(ashioto.id, latestAshiotoIds.map(row => row.id))
     );
@@ -456,8 +495,169 @@ api.get('/ashioto/', jwtAuth, async (c) => {
     return c.json(latestAshiotoRecords)
 })
 
-api.post('/ashioto/', jwtAuth, async (c) => {
+// 現在再生中の曲を取得
+api.get('/spotify/current-track', jwtAuth, async (c) => {
+    const user = c.get('jwtPayload') as any
+    const db = createDb(c.env.DB)
 
+    // ユーザーのSpotifyトークンを取得（refreshTokenを使用）
+    const userRecord = await db.select().from(users).where(eq(users.spotifyId, user.spotifyId)).limit(1)
+
+    if (!userRecord.length) {
+        return c.json({ error: 'User not found' }, 404)
+    }
+
+    const { refreshToken } = userRecord[0]
+
+    if (!refreshToken) {
+        return c.json({ error: 'No refresh token available' }, 400)
+    }
+
+    // アクセストークンを更新
+    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${btoa(`${client_id}:${client_secret}`)}`
+        },
+        body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+        }),
+    })
+
+    if (!tokenResponse.ok) {
+        return c.json({ error: 'Failed to refresh token' }, 400)
+    }
+
+    const tokenData = await tokenResponse.json() as SpotifyTokenResponse
+
+    try {
+        const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`,
+            },
+        })
+
+        if (response.status === 204) {
+            return c.json({ error: 'No track currently playing' }, 404)
+        }
+
+        if (!response.ok) {
+            return c.json({ error: 'Failed to get current track' }, 400)
+        }
+
+        const data = await response.json()
+
+        if (!data.item) {
+            return c.json({ error: 'No track currently playing' }, 404)
+        }
+
+        const track = {
+            id: data.item.id,
+            name: data.item.name,
+            artists: data.item.artists.map((artist: any) => artist.name),
+            album: data.item.album.name,
+            albumCover: data.item.album.images[0]?.url || null,
+        }
+
+        return c.json(track)
+    } catch (error) {
+        console.error('Current track error:', error)
+        return c.json({ error: 'Failed to get current track' }, 500)
+    }
+})
+
+// ログアウト
+api.post('/auth/logout', async (c) => {
+    setCookie(c, 'session', '', {
+        maxAge: 0,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Strict',
+    })
+
+    return c.json({ message: 'Logged out successfully' })
+})
+
+api.post('/ashioto', jwtAuth, async (c) => {
+    const user = c.get('jwtPayload') as any
+    const db = createDb(c.env.DB)
+
+    try {
+        const body = await c.req.json()
+        const {
+            spotifyTrackId,
+            trackName,
+            artistName,
+            albumName,
+            albumCover,
+            landmarkId,
+            comment
+        } = body
+
+        // 必須フィールドの検証
+        if (!spotifyTrackId || !trackName || !artistName || !landmarkId) {
+            return c.json({ error: 'Missing required fields: spotifyTrackId, trackName, artistName, landmarkId are required' }, 400)
+        }
+
+        // ランドマークが存在するかチェック
+        const landmark = await db.select().from(landmarks).where(eq(landmarks.id, landmarkId)).get()
+        if (!landmark) {
+            return c.json({ error: 'Landmark not found' }, 404)
+        }
+
+        // まずトラック情報を保存（存在確認してから挿入）
+        const existingTrack = await db.select().from(tracks).where(eq(tracks.spotifyTrackId, spotifyTrackId)).limit(1)
+
+        if (existingTrack.length === 0) {
+            await db.insert(tracks).values({
+                spotifyTrackId,
+                trackName,
+                artistName,
+                albumName: albumName || '',
+                albumImageUrl: albumCover || '',
+            })
+        }
+
+        // ashioto投稿を作成
+        const newPost = await db.insert(ashioto).values({
+            userId: user.spotifyId,
+            trackId: spotifyTrackId,
+            landmarkId: parseInt(landmarkId),
+            timestamp: new Date().toISOString(),
+            comment: comment || null,
+            isPublic: true,
+        }).returning()
+
+        // 投稿詳細情報を返す
+        const postWithDetails = await db.select({
+            id: ashioto.id,
+            userId: ashioto.userId,
+            userName: users.displayName,
+            userAvatar: users.profileImageUrl,
+            trackName: tracks.trackName,
+            artistName: tracks.artistName,
+            albumName: tracks.albumName,
+            albumCover: tracks.albumImageUrl,
+            comment: ashioto.comment,
+            createdAt: ashioto.timestamp,
+            latitude: landmarks.latitude,
+            longitude: landmarks.longitude,
+            locationName: landmarks.name,
+        })
+        .from(ashioto)
+        .leftJoin(users, eq(ashioto.userId, users.spotifyId))
+        .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
+        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(eq(ashioto.id, newPost[0].id))
+        .get()
+
+        return c.json(postWithDetails)
+    } catch (error) {
+        console.error('Post creation error:', error)
+        return c.json({ error: 'Failed to create post' }, 500)
+    }
 })
 
 export default api
