@@ -261,6 +261,20 @@ button[type="submit"]:hover {
   font-size: 16px;
 }
 
+.track-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.track-link:hover {
+  color: #1db954; /* Spotify Green */
+}
+
+.track-link:hover h3 {
+  color: #1db954;
+}
+
 .track-details p {
   margin: 0;
   color: #666;
@@ -655,6 +669,21 @@ button[type="submit"]:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.popup-track-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+  display: block;
+}
+
+.popup-track-link:hover {
+  color: #1db954; /* Spotify Green */
+}
+
+.popup-track-link:hover .popup-track-name {
+  color: #1db954;
 }
 
 .popup-artist-name {

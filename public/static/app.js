@@ -284,8 +284,17 @@ class AshiotoApp {
     const speedDialMain = document.getElementById("speedDialMain");
     const speedDialActions = document.getElementById("speedDialActions");
     const createPostButton = document.getElementById("createPostButton");
+    const getCurrentLocationButton = document.getElementById(
+      "getCurrentLocationButton"
+    );
 
-    if (!speedDialMain || !speedDialActions || !createPostButton) return;
+    if (
+      !speedDialMain ||
+      !speedDialActions ||
+      !createPostButton ||
+      !getCurrentLocationButton
+    )
+      return;
 
     let isOpen = false;
 
@@ -311,6 +320,17 @@ class AshiotoApp {
 
       // 投稿フォームを表示
       this.showPostForm();
+    });
+
+    // 現在地取得ボタンのクリック
+    getCurrentLocationButton.addEventListener("click", () => {
+      // SpeedDialを閉じる
+      isOpen = false;
+      speedDialMain.classList.remove("active");
+      speedDialActions.classList.remove("active");
+
+      // 現在地を取得して地図を移動
+      this.getUserLocationAndMoveMap();
     });
 
     // 外側クリックでSpeedDialを閉じる
@@ -366,6 +386,65 @@ class AshiotoApp {
         icon: userIcon,
       }
     ).addTo(this.map);
+  }
+
+  // SpeedDialの現在地取得ボタン用（ユーザー操作によるもの）
+  getUserLocationAndMoveMap() {
+    if ("geolocation" in navigator) {
+      // ローディング表示（オプション）
+      console.log("現在地を取得中...");
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          this.currentPosition = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+          // 地図を現在地に移動（少しズームアップ）
+          this.map.setView(
+            [this.currentPosition.lat, this.currentPosition.lng],
+            16
+          );
+
+          // ユーザーマーカーを更新
+          this.updateUserMarker();
+
+          // 近くの投稿を再読み込み
+          this.loadNearbyPosts();
+
+          console.log("現在地を取得しました:", this.currentPosition);
+        },
+        (error) => {
+          console.warn("位置情報の取得に失敗しました:", error);
+
+          // エラーメッセージを表示（オプション）
+          let errorMessage = "位置情報の取得に失敗しました。";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage =
+                "位置情報へのアクセスが拒否されました。ブラウザの設定を確認してください。";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "位置情報が利用できません。";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "位置情報の取得がタイムアウトしました。";
+              break;
+          }
+
+          // 簡易的なアラート表示（後で改善可能）
+          alert(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    } else {
+      alert("このブラウザでは位置情報機能をサポートしていません。");
+    }
   }
 
   // 近くの投稿を読み込み
@@ -451,7 +530,11 @@ class AshiotoApp {
         post.trackName
       }" class="popup-album-cover" />
             <div class="popup-track-info">
-              <div class="popup-track-name">${post.trackName}</div>
+              <a href="https://open.spotify.com/intl-ja/track/${
+                post.spotifyTrackId
+              }" target="_blank" class="popup-track-link">
+                <div class="popup-track-name">${post.trackName}</div>
+              </a>
               <div class="popup-artist-name">${post.artistName}</div>
               ${
                 post.albumName
@@ -505,7 +588,11 @@ class AshiotoApp {
           post.trackName
         }" class="album-cover">
           <div class="track-details">
-            <h3>${post.trackName}</h3>
+            <a href="https://open.spotify.com/intl-ja/track/${
+              post.spotifyTrackId
+            }" target="_blank" class="track-link">
+              <h3>${post.trackName}</h3>
+            </a>
             <p>${post.artistName}</p>
             ${
               post.albumName

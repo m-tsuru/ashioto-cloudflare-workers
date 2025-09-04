@@ -140,6 +140,9 @@ frontend.get('/', async (c) => {
         {/* SpeedDial ボタン */}
         <div class="speed-dial" id="speedDial">
           <div class="speed-dial-actions" id="speedDialActions">
+            <button class="speed-dial-action" id="getCurrentLocationButton" title="現在地を取得">
+              📍
+            </button>
             <button class="speed-dial-action" id="createPostButton" title="音楽を投稿">
               🎵
             </button>
