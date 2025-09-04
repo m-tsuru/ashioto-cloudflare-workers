@@ -43,6 +43,7 @@ const BottomSheet: FC<{ children?: any }> = ({ children }) => {
 
 const MusicPost: FC<{ post: any }> = ({ post }) => {
   return (
+
     <div class="music-post">
       <div class="music-post-header">
         <img src={post.userAvatar || '/static/default-avatar.png'} alt={post.userName} class="user-avatar" />
@@ -54,9 +55,11 @@ const MusicPost: FC<{ post: any }> = ({ post }) => {
       <div class="music-info">
         <img src={post.albumCover} alt={post.trackName} class="album-cover" />
         <div class="track-details">
-          <h3>{post.trackName}</h3>
-          <p>{post.artistName}</p>
-          {post.albumName && <p class="album-name">{post.albumName}</p>}
+            <h3>
+
+            </h3>
+            <p>{post.artistName}</p>
+            {post.albumName && <p class="album-name">{post.albumName}</p>}
         </div>
       </div>
       {post.comment && <p class="post-comment">{post.comment}</p>}

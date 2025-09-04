@@ -94,27 +94,56 @@ class AshiotoApp {
     if (!sheet || !handle) return;
 
     let startY = 0;
-    let startBottom = 0;
     let dragging = false;
+
+    // 状態: 'minimized', 'normal', 'expanded'
+    let sheetState = "normal";
+
+    // ダブルクリックで状態を循環
+    handle.addEventListener("dblclick", () => {
+      this.cycleBottomSheetState();
+    });
 
     // マウスイベント（PC）
     handle.addEventListener("mousedown", (e) => {
+      if (e.detail === 2) return; // ダブルクリックは無視
       dragging = true;
       startY = e.clientY;
-      startBottom = parseInt(sheet.dataset.bottom || "0", 10);
       document.body.style.userSelect = "none";
     });
 
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
-      const dy = startY - e.clientY;
-      let newBottom = startBottom + dy;
-      newBottom = Math.max(
-        0,
-        Math.min(newBottom, window.innerHeight - sheet.offsetHeight - 40)
-      );
-      sheet.style.transform = `translateX(-50%) translateY(-${newBottom}px)`;
-      sheet.dataset.bottom = newBottom;
+      const dy = e.clientY - startY;
+
+      // 下向きに一定距離ドラッグしたら縮小
+      if (dy > 50 && sheetState === "normal") {
+        this.minimizeBottomSheet();
+        sheetState = "minimized";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
+      // 上向きに一定距離ドラッグしたら拡張
+      else if (dy < -50 && sheetState === "normal") {
+        this.expandBottomSheet();
+        sheetState = "expanded";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
+      // 縮小状態から上向きドラッグで通常に戻す
+      else if (dy < -50 && sheetState === "minimized") {
+        this.normalizeBottomSheet();
+        sheetState = "normal";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
+      // 拡張状態から下向きドラッグで通常に戻す
+      else if (dy > 50 && sheetState === "expanded") {
+        this.normalizeBottomSheet();
+        sheetState = "normal";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
     });
 
     window.addEventListener("mouseup", () => {
@@ -128,20 +157,41 @@ class AshiotoApp {
     handle.addEventListener("touchstart", (e) => {
       dragging = true;
       startY = e.touches[0].clientY;
-      startBottom = parseInt(sheet.dataset.bottom || "0", 10);
       document.body.style.userSelect = "none";
     });
 
     window.addEventListener("touchmove", (e) => {
       if (!dragging) return;
-      const dy = startY - e.touches[0].clientY;
-      let newBottom = startBottom + dy;
-      newBottom = Math.max(
-        0,
-        Math.min(newBottom, window.innerHeight - sheet.offsetHeight - 40)
-      );
-      sheet.style.transform = `translateX(-50%) translateY(-${newBottom}px)`;
-      sheet.dataset.bottom = newBottom;
+      const dy = e.touches[0].clientY - startY;
+
+      // 下向きに一定距離ドラッグしたら縮小
+      if (dy > 50 && sheetState === "normal") {
+        this.minimizeBottomSheet();
+        sheetState = "minimized";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
+      // 上向きに一定距離ドラッグしたら拡張
+      else if (dy < -50 && sheetState === "normal") {
+        this.expandBottomSheet();
+        sheetState = "expanded";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
+      // 縮小状態から上向きドラッグで通常に戻す
+      else if (dy < -50 && sheetState === "minimized") {
+        this.normalizeBottomSheet();
+        sheetState = "normal";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
+      // 拡張状態から下向きドラッグで通常に戻す
+      else if (dy > 50 && sheetState === "expanded") {
+        this.normalizeBottomSheet();
+        sheetState = "normal";
+        dragging = false;
+        document.body.style.userSelect = "";
+      }
     });
 
     window.addEventListener("touchend", () => {
@@ -150,6 +200,60 @@ class AshiotoApp {
         document.body.style.userSelect = "";
       }
     });
+
+    // 状態を追跡
+    this.bottomSheetState = sheetState;
+  }
+
+  // Bottom-sheetの縮小
+  minimizeBottomSheet() {
+    const sheet = document.getElementById("bottomSheet");
+    if (sheet) {
+      sheet.classList.remove("expanded");
+      sheet.classList.add("minimized");
+      this.bottomSheetState = "minimized";
+    }
+  }
+
+  // Bottom-sheetの拡張
+  expandBottomSheet() {
+    const sheet = document.getElementById("bottomSheet");
+    if (sheet) {
+      sheet.classList.remove("minimized");
+      sheet.classList.add("expanded");
+      this.bottomSheetState = "expanded";
+    }
+  }
+
+  // Bottom-sheetの通常状態
+  normalizeBottomSheet() {
+    const sheet = document.getElementById("bottomSheet");
+    if (sheet) {
+      sheet.classList.remove("minimized", "expanded");
+      this.bottomSheetState = "normal";
+    }
+  }
+
+  // Bottom-sheetの状態を循環
+  cycleBottomSheetState() {
+    switch (this.bottomSheetState) {
+      case "normal":
+        this.expandBottomSheet();
+        break;
+      case "expanded":
+        this.minimizeBottomSheet();
+        break;
+      case "minimized":
+        this.normalizeBottomSheet();
+        break;
+      default:
+        this.normalizeBottomSheet();
+    }
+  }
+
+  // 旧メソッドの互換性維持
+  toggleBottomSheet() {
+    this.cycleBottomSheetState();
   }
 
   // イベントハンドラーのバインド

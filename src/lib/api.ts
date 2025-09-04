@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { setCookie, getCookie } from 'hono/cookie'
 import { jwt, sign, verify } from 'hono/jwt'
-import { eq, and, gte, lte, sql, inArray } from 'drizzle-orm'
+import { eq, and, gte, lte, sql, inArray, desc } from 'drizzle-orm'
 import { ashioto, landmarks, users, tracks } from '../db/schema'
 import { createDb } from '../db/db'
 import 'dotenv/config';
@@ -404,7 +404,27 @@ api.get('/ashioto', jwtAuth, async (c) => {
         const lon0 = lon - lonDelta
         const lon1 = lon + lonDelta
 
-        // 簡略化：指定範囲内の全投稿を取得
+        // 指定範囲内で各ランドマークの最新投稿のIDを取得
+        const latestAshiotoIds = await db
+        .select({
+            id: ashioto.id,
+            landmarkId: ashioto.landmarkId,
+            maxTimestamp: sql`MAX(${ashioto.timestamp})`.as('maxTimestamp')
+        })
+        .from(ashioto)
+        .innerJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(
+            and(
+                gte(landmarks.latitude, lat0),
+                lte(landmarks.latitude, lat1),
+                gte(landmarks.longitude, lon0),
+                lte(landmarks.longitude, lon1)
+            )
+        )
+        .groupBy(ashioto.landmarkId)
+        .having(sql`${ashioto.timestamp} = MAX(${ashioto.timestamp})`);
+
+        // そのIDで実際の投稿データを取得
         const nearbyPosts = await db
         .select({
             id: ashioto.id,
@@ -426,17 +446,11 @@ api.get('/ashioto', jwtAuth, async (c) => {
         .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
         .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
         .where(
-            and(
-                gte(landmarks.latitude, lat0),
-                lte(landmarks.latitude, lat1),
-                gte(landmarks.longitude, lon0),
-                lte(landmarks.longitude, lon1)
-            )
+            inArray(ashioto.id, latestAshiotoIds.map(row => row.id))
         )
-        .orderBy(ashioto.timestamp)
-        .limit(50);
+        .orderBy(desc(ashioto.timestamp));
 
-        console.log(`Found ${nearbyPosts.length} posts in area`);
+        console.log(`Found ${nearbyPosts.length} latest posts per landmark in area`);
         return c.json(nearbyPosts)
     }
 
