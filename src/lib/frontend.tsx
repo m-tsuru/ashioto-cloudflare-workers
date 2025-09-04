@@ -73,7 +73,7 @@ const MusicPost: FC<{ post: any }> = ({ post }) => {
 const LoginPrompt: FC = () => {
   return (
     <div class="login-prompt">
-      <h2>🎵 Ashioto</h2>
+      <h2>ashioto</h2>
       <p>音楽と場所を共有するSNSプラットフォーム</p>
       <a href="/api/auth" class="login-button">
         Spotifyでログイン
@@ -85,10 +85,10 @@ const LoginPrompt: FC = () => {
 const PostForm: FC = () => {
   return (
     <div class="post-form" id="postForm" style="display: none;">
-      <h3>📍 この場所で聴いている音楽を投稿</h3>
+      <h3>🐾あしあとをのこす</h3>
       <form id="musicPostForm">
         <div class="form-group" id="locationSelection" style="display: none;">
-          <label>投稿する場所を選択してください</label>
+          <label>紐づける場所を選択してください</label>
           <div id="nearbyLocations"></div>
         </div>
         <div class="form-group">
@@ -131,7 +131,7 @@ frontend.get('/', async (c) => {
             </div>
             <PostForm />
             <div id="nearbyPosts">
-              <h3>📍 この付近の投稿</h3>
+              <h3>📍 ちかくのあしあと</h3>
               <div id="postsList"></div>
             </div>
           </div>
@@ -140,10 +140,10 @@ frontend.get('/', async (c) => {
         {/* SpeedDial ボタン */}
         <div class="speed-dial" id="speedDial">
           <div class="speed-dial-actions" id="speedDialActions">
-            <button class="speed-dial-action" id="getCurrentLocationButton" title="現在地を取得">
+            <button class="speed-dial-action" id="getCurrentLocationButton" title="更新">
               📍
             </button>
-            <button class="speed-dial-action" id="createPostButton" title="音楽を投稿">
+            <button class="speed-dial-action" id="createPostButton" title="あしあと">
               🎵
             </button>
           </div>
