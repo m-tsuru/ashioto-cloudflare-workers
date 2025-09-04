@@ -673,4 +673,118 @@ api.post('/ashioto', jwtAuth, async (c) => {
     }
 })
 
+// ユーザーの足跡（投稿履歴）を取得
+api.get('/user/:userId/footprints', jwtAuth, async (c) => {
+    const targetUserId = c.req.param('userId')
+    const db = createDb(c.env.DB)
+
+    try {
+        const userFootprints = await db
+        .select({
+            id: ashioto.id,
+            userId: ashioto.userId,
+            userName: users.displayName,
+            userAvatar: users.profileImageUrl,
+            spotifyTrackId: tracks.spotifyTrackId,
+            trackName: tracks.trackName,
+            artistName: tracks.artistName,
+            albumName: tracks.albumName,
+            albumCover: tracks.albumImageUrl,
+            comment: ashioto.comment,
+            createdAt: ashioto.timestamp,
+            latitude: landmarks.latitude,
+            longitude: landmarks.longitude,
+            locationName: landmarks.name,
+        })
+        .from(ashioto)
+        .leftJoin(users, eq(ashioto.userId, users.spotifyId))
+        .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
+        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(eq(ashioto.userId, targetUserId))
+        .orderBy(desc(ashioto.timestamp))
+        .limit(50);
+
+        return c.json(userFootprints)
+    } catch (error) {
+        console.error('Footprints fetch error:', error)
+        return c.json({ error: 'Failed to fetch footprints' }, 500)
+    }
+})
+
+// 自分の足跡（投稿履歴）を取得
+api.get('/my-footprints', jwtAuth, async (c) => {
+    const user = c.get('jwtPayload') as any
+    const db = createDb(c.env.DB)
+
+    try {
+        const userFootprints = await db
+        .select({
+            id: ashioto.id,
+            userId: ashioto.userId,
+            userName: users.displayName,
+            userAvatar: users.profileImageUrl,
+            spotifyTrackId: tracks.spotifyTrackId,
+            trackName: tracks.trackName,
+            artistName: tracks.artistName,
+            albumName: tracks.albumName,
+            albumCover: tracks.albumImageUrl,
+            comment: ashioto.comment,
+            createdAt: ashioto.timestamp,
+            latitude: landmarks.latitude,
+            longitude: landmarks.longitude,
+            locationName: landmarks.name,
+        })
+        .from(ashioto)
+        .leftJoin(users, eq(ashioto.userId, users.spotifyId))
+        .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
+        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(eq(ashioto.userId, user.spotifyId))
+        .orderBy(desc(ashioto.timestamp))
+        .limit(100);
+
+        return c.json(userFootprints)
+    } catch (error) {
+        console.error('My footprints fetch error:', error)
+        return c.json({ error: 'Failed to fetch my footprints' }, 500)
+    }
+})
+
+// ユーザー情報を取得
+api.get('/user/:userId', jwtAuth, async (c) => {
+    const targetUserId = c.req.param('userId')
+    const db = createDb(c.env.DB)
+
+    try {
+        const userInfo = await db
+        .select({
+            spotifyId: users.spotifyId,
+            displayName: users.displayName,
+            avatarUrl: users.profileImageUrl,
+            createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.spotifyId, targetUserId))
+        .get()
+
+        if (!userInfo) {
+            return c.json({ error: 'User not found' }, 404)
+        }
+
+        // 投稿数を取得
+        const postCount = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(ashioto)
+        .where(eq(ashioto.userId, targetUserId))
+        .get()
+
+        return c.json({
+            ...userInfo,
+            postCount: postCount?.count || 0
+        })
+    } catch (error) {
+        console.error('User info fetch error:', error)
+        return c.json({ error: 'Failed to fetch user info' }, 500)
+    }
+})
+
 export default api

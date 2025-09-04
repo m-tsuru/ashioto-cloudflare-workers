@@ -156,4 +156,52 @@ frontend.get('/', async (c) => {
   )
 })
 
+// 自分の足跡ページ
+frontend.get('/footprints', async (c) => {
+  return c.html(
+    <Layout title="あしあとをたどる - Ashioto">
+      <div id="footprints-app">
+        <header class="page-header">
+          <a href="/" class="back-button">← もどる</a>
+          <h1>🐾 あしあとをたどる</h1>
+        </header>
+        <div class="page-content">
+          <div id="loginSection">
+            <LoginPrompt />
+          </div>
+          <div id="userSection" style="display: none;">
+            <div id="footprintsList" class="footprints-list"></div>
+          </div>
+        </div>
+      </div>
+      <script src="/static/footprints.js"></script>
+    </Layout>
+  )
+})
+
+// ユーザープロフィールページ
+frontend.get('/user/:userId', async (c) => {
+  const userId = c.req.param('userId')
+  return c.html(
+    <Layout title={`ユーザープロフィール - Ashioto`}>
+      <div id="profile-app" data-user-id={userId}>
+        <header class="page-header">
+          <a href="/" class="back-button">← もどる</a>
+          <h1>👤 プロフィール</h1>
+        </header>
+        <div class="page-content">
+          <div id="loginSection">
+            <LoginPrompt />
+          </div>
+          <div id="userSection" style="display: none;">
+            <div id="profileInfo" class="profile-info"></div>
+            <div id="userFootprints" class="user-footprints"></div>
+          </div>
+        </div>
+      </div>
+      <script src="/static/profile.js"></script>
+    </Layout>
+  )
+})
+
 export default frontend

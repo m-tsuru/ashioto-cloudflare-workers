@@ -277,6 +277,17 @@ class AshiotoApp {
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => this.logout());
     }
+
+    // ユーザーアバターをクリックで自分のプロフィールページに移動
+    const userAvatar = document.getElementById("userAvatar");
+    if (userAvatar) {
+      userAvatar.addEventListener("click", () => {
+        if (this.user && this.user.spotifyId) {
+          window.location.href = `/user/${this.user.spotifyId}`;
+        }
+      });
+      userAvatar.style.cursor = "pointer";
+    }
   }
 
   // SpeedDial初期化
@@ -577,7 +588,9 @@ class AshiotoApp {
           post.userName
         }" class="user-avatar">
           <div class="user-info">
-            <h4>${post.userName}</h4>
+            <a href="/user/${post.userId}" class="user-name-link">
+              <h4>${post.userName}</h4>
+            </a>
             <span class="post-time">${new Date(post.createdAt).toLocaleString(
               "ja-JP"
             )}</span>
