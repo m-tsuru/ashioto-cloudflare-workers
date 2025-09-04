@@ -82,12 +82,8 @@ class AshiotoApp {
       this.loadNearbyPosts();
     });
 
-    // 地図クリック時のイベント
-    this.map.on("click", (e) => {
-      this.currentPosition = { lat: e.latlng.lat, lng: e.latlng.lng };
-      this.updateUserMarker();
-      this.showPostForm();
-    });
+    // SpeedDialのイベントハンドラーを追加
+    this.initSpeedDial();
   }
 
   // ドラッグ可能ボトムシート
@@ -179,6 +175,51 @@ class AshiotoApp {
     }
   }
 
+  // SpeedDial初期化
+  initSpeedDial() {
+    const speedDialMain = document.getElementById("speedDialMain");
+    const speedDialActions = document.getElementById("speedDialActions");
+    const createPostButton = document.getElementById("createPostButton");
+
+    if (!speedDialMain || !speedDialActions || !createPostButton) return;
+
+    let isOpen = false;
+
+    // SpeedDialメインボタンのクリック
+    speedDialMain.addEventListener("click", () => {
+      isOpen = !isOpen;
+
+      if (isOpen) {
+        speedDialMain.classList.add("active");
+        speedDialActions.classList.add("active");
+      } else {
+        speedDialMain.classList.remove("active");
+        speedDialActions.classList.remove("active");
+      }
+    });
+
+    // 投稿ボタンのクリック
+    createPostButton.addEventListener("click", () => {
+      // SpeedDialを閉じる
+      isOpen = false;
+      speedDialMain.classList.remove("active");
+      speedDialActions.classList.remove("active");
+
+      // 投稿フォームを表示
+      this.showPostForm();
+    });
+
+    // 外側クリックでSpeedDialを閉じる
+    document.addEventListener("click", (e) => {
+      const speedDial = document.getElementById("speedDial");
+      if (isOpen && speedDial && !speedDial.contains(e.target)) {
+        isOpen = false;
+        speedDialMain.classList.remove("active");
+        speedDialActions.classList.remove("active");
+      }
+    });
+  }
+
   // ユーザーの現在位置を取得
   getUserLocation() {
     if ("geolocation" in navigator) {
@@ -226,13 +267,21 @@ class AshiotoApp {
   // 近くの投稿を読み込み
   async loadNearbyPosts() {
     try {
+      console.log("Loading posts for position:", this.currentPosition);
       const response = await fetch(
         `/api/ashioto?lat=${this.currentPosition.lat}&lon=${this.currentPosition.lng}&radius=1000`,
         {
           credentials: "include", // Cookieを含める
         }
       );
+
+      if (!response.ok) {
+        console.error("Failed to fetch posts:", response.status);
+        return;
+      }
+
       const posts = await response.json();
+      console.log("Loaded posts:", posts.length, posts);
 
       this.clearPostMarkers();
       this.renderPosts(posts);
@@ -244,41 +293,82 @@ class AshiotoApp {
 
   // 投稿マーカーをクリア
   clearPostMarkers() {
-    this.postsMarkers.forEach((marker) => this.map.removeLayer(marker));
+    console.log("Clearing markers:", this.postsMarkers.length);
+    this.postsMarkers.forEach((marker) => {
+      this.map.removeLayer(marker);
+    });
     this.postsMarkers = [];
+    console.log("Markers cleared, remaining:", this.postsMarkers.length);
   }
 
   // 地図に投稿マーカーを追加
   addPostMarkers(posts) {
-    posts.forEach((post) => {
+    console.log("Adding markers for posts:", posts.length);
+    posts.forEach((post, index) => {
+      console.log(`Adding marker ${index + 1}:`, {
+        trackName: post.trackName,
+        latitude: post.latitude,
+        longitude: post.longitude,
+        albumCover: post.albumCover,
+      });
+
+      // アートワーク付きのマーカーを作成
       const musicIcon = L.divIcon({
-        html: `<div style="background: white; border-radius: 50%; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">🎵</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
+        html: `
+          <div class="music-marker">
+            <img src="${post.albumCover}" alt="${post.trackName}" class="album-artwork" />
+          </div>
+        `,
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+        className: "custom-music-marker",
       });
 
       const marker = L.marker([post.latitude, post.longitude], {
         icon: musicIcon,
       }).addTo(this.map);
 
+      // クリック時にポップアップを表示
       marker.bindPopup(`
-        <div style="min-width: 200px;">
-          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-            <img src="${post.albumCover}" alt="${
-        post.trackName
-      }" style="width: 50px; height: 50px; border-radius: 4px;">
-            <div>
-              <strong>${post.trackName}</strong><br>
-              <small>${post.artistName}</small>
+        <div class="music-popup">
+          <div class="popup-header">
+            <img src="${
+              post.userAvatar || "/static/default-avatar.png"
+            }" alt="${post.userName}" class="popup-avatar" />
+            <div class="popup-user-info">
+              <strong>${post.userName}</strong>
+              <span class="popup-time">${new Date(
+                post.createdAt
+              ).toLocaleString("ja-JP")}</span>
             </div>
           </div>
-          <p><strong>@${post.userName}</strong></p>
-          ${post.comment ? `<p>${post.comment}</p>` : ""}
+          <div class="popup-music">
+            <img src="${post.albumCover}" alt="${
+        post.trackName
+      }" class="popup-album-cover" />
+            <div class="popup-track-info">
+              <div class="popup-track-name">${post.trackName}</div>
+              <div class="popup-artist-name">${post.artistName}</div>
+              ${
+                post.albumName
+                  ? `<div class="popup-album-name">${post.albumName}</div>`
+                  : ""
+              }
+            </div>
+          </div>
+          ${
+            post.comment
+              ? `<div class="popup-comment">${post.comment}</div>`
+              : ""
+          }
+          <div class="popup-location">📍 ${post.locationName}</div>
         </div>
       `);
 
       this.postsMarkers.push(marker);
+      console.log(`Marker ${index + 1} added to map and array`);
     });
+    console.log("Total markers added:", this.postsMarkers.length);
   }
 
   // 投稿リストをレンダリング
@@ -386,8 +476,8 @@ class AshiotoApp {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      return data.locations || [];
+      const locations = await response.json();
+      return Array.isArray(locations) ? locations : [];
     } catch (error) {
       console.error("Failed to search nearby locations:", error);
       return [];
@@ -405,25 +495,21 @@ class AshiotoApp {
       return;
     }
 
+    // データを保存（後で投稿時に使用）
+    this.nearbyLocationsData = locations;
+
     nearbyLocations.innerHTML = locations
       .map(
         (location) => `
-      <div class="location-option" onclick="this.selectLocation(${
-        location.id
-      })">
+      <div class="location-option">
         <input type="radio" name="selectedLocation" value="${
-          location.id
-        }" id="location-${location.id}">
-        <label for="location-${location.id}" class="location-info">
+          location.gid
+        }" id="location-${location.gid}">
+        <label for="location-${location.gid}" class="location-info">
           <div class="location-name">${location.name}</div>
-          <div class="location-address">${location.address || ""}</div>
-          ${
-            location.distance
-              ? `<div class="location-distance">${Math.round(
-                  location.distance
-                )}m</div>`
-              : ""
-          }
+          <div class="location-address">${
+            location.genre ? location.genre.join(", ") : ""
+          }</div>
         </label>
       </div>
     `
@@ -516,11 +602,22 @@ class AshiotoApp {
       return;
     }
 
-    const selectedLocation = document.querySelector(
+    const selectedLocationInput = document.querySelector(
       'input[name="selectedLocation"]:checked'
     );
-    if (!selectedLocation) {
+    if (!selectedLocationInput) {
       alert("場所を選択してください");
+      return;
+    }
+
+    // 選択された場所の詳細情報を取得
+    const selectedLocationGid = selectedLocationInput.value;
+    const selectedLocation = this.nearbyLocationsData.find(
+      (loc) => loc.gid === selectedLocationGid
+    );
+
+    if (!selectedLocation) {
+      alert("選択された場所の情報が見つかりません");
       return;
     }
 
@@ -532,7 +629,10 @@ class AshiotoApp {
       artistName: this.currentTrack.artists.join(", "),
       albumName: this.currentTrack.album,
       albumCover: this.currentTrack.albumCover,
-      landmarkId: parseInt(selectedLocation.value),
+      landmarkGid: selectedLocation.gid,
+      landmarkName: selectedLocation.name,
+      landmarkLat: selectedLocation.geo.lat,
+      landmarkLon: selectedLocation.geo.lon,
       comment: comment.trim() || null,
     };
 

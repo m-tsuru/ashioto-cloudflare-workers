@@ -133,6 +133,18 @@ frontend.get('/', async (c) => {
             </div>
           </div>
         </BottomSheet>
+
+        {/* SpeedDial ボタン */}
+        <div class="speed-dial" id="speedDial">
+          <div class="speed-dial-actions" id="speedDialActions">
+            <button class="speed-dial-action" id="createPostButton" title="音楽を投稿">
+              🎵
+            </button>
+          </div>
+          <button class="speed-dial-main" id="speedDialMain">
+            ➕
+          </button>
+        </div>
       </div>
     </Layout>
   )

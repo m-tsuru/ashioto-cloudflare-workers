@@ -422,3 +422,251 @@ button[type="submit"]:hover {
   background: #ccc !important;
   cursor: not-allowed;
 }
+
+/* SpeedDial */
+.speed-dial {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1001;
+}
+
+.speed-dial-main {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #1db954;
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.speed-dial-main:hover {
+  background: #1aa34a;
+  transform: scale(1.1);
+}
+
+.speed-dial-main.active {
+  transform: rotate(45deg);
+}
+
+.speed-dial-actions {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.speed-dial-actions.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.speed-dial-action {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2c5aa0;
+  color: white;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.speed-dial-action:hover {
+  background: #1e3f73;
+  transform: scale(1.1);
+}
+
+/* SpeedDial モバイル対応 */
+@media (max-width: 768px) {
+  .speed-dial {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .speed-dial-main {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+
+  .speed-dial-action {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .speed-dial-actions {
+    bottom: 66px;
+  }
+}
+
+/* Music Marker Styles */
+.custom-music-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.music-marker {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid white;
+}
+
+.album-artwork {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.music-marker-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #1db954;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Music Popup Styles */
+.music-popup {
+  min-width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.popup-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.popup-user-info {
+  flex: 1;
+}
+
+.popup-user-info strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.popup-time {
+  font-size: 12px;
+  color: #666;
+}
+
+.popup-music {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.popup-album-cover {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.popup-track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.popup-track-name {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-artist-name {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-album-name {
+  color: #999;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-comment {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  border-left: 3px solid #1db954;
+}
+
+.popup-location {
+  color: #666;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* Leaflet ポップアップのカスタマイズ */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-popup-content {
+  margin: 16px !important;
+  line-height: 1.4 !important;
+}

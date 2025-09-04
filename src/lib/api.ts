@@ -404,22 +404,8 @@ api.get('/ashioto', jwtAuth, async (c) => {
         const lon0 = lon - lonDelta
         const lon1 = lon + lonDelta
 
-        const latestAshiotoIds = await db
-        .select({ id: ashioto.id })
-        .from(ashioto)
-        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
-        .where(
-            and(
-                gte(landmarks.latitude, lat0),
-                lte(landmarks.latitude, lat1),
-                gte(landmarks.longitude, lon0),
-                lte(landmarks.longitude, lon1)
-            )
-        )
-        .orderBy(ashioto.timestamp)
-        .limit(100)
-
-        const latestAshiotoRecords = await db
+        // 簡略化：指定範囲内の全投稿を取得
+        const nearbyPosts = await db
         .select({
             id: ashioto.id,
             userId: ashioto.userId,
@@ -440,10 +426,18 @@ api.get('/ashioto', jwtAuth, async (c) => {
         .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
         .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
         .where(
-            inArray(ashioto.id, latestAshiotoIds.map(row => row.id))
-        );
+            and(
+                gte(landmarks.latitude, lat0),
+                lte(landmarks.latitude, lat1),
+                gte(landmarks.longitude, lon0),
+                lte(landmarks.longitude, lon1)
+            )
+        )
+        .orderBy(ashioto.timestamp)
+        .limit(50);
 
-        return c.json(latestAshiotoRecords)
+        console.log(`Found ${nearbyPosts.length} posts in area`);
+        return c.json(nearbyPosts)
     }
 
     // 元の緯度・経度範囲指定方式
@@ -592,19 +586,16 @@ api.post('/ashioto', jwtAuth, async (c) => {
             artistName,
             albumName,
             albumCover,
-            landmarkId,
+            landmarkGid, // 外部APIのgid
+            landmarkName, // 選択された場所の名前
+            landmarkLat,  // 選択された場所の緯度
+            landmarkLon,  // 選択された場所の経度
             comment
         } = body
 
         // 必須フィールドの検証
-        if (!spotifyTrackId || !trackName || !artistName || !landmarkId) {
-            return c.json({ error: 'Missing required fields: spotifyTrackId, trackName, artistName, landmarkId are required' }, 400)
-        }
-
-        // ランドマークが存在するかチェック
-        const landmark = await db.select().from(landmarks).where(eq(landmarks.id, landmarkId)).get()
-        if (!landmark) {
-            return c.json({ error: 'Landmark not found' }, 404)
+        if (!spotifyTrackId || !trackName || !artistName || !landmarkGid || !landmarkName || landmarkLat == null || landmarkLon == null) {
+            return c.json({ error: 'Missing required fields' }, 400)
         }
 
         // まずトラック情報を保存（存在確認してから挿入）
@@ -620,40 +611,46 @@ api.post('/ashioto', jwtAuth, async (c) => {
             })
         }
 
+        // ランドマークを作成または取得（名前と座標で重複チェック）
+        const existingLandmark = await db.select()
+            .from(landmarks)
+            .where(
+                and(
+                    eq(landmarks.name, landmarkName),
+                    eq(landmarks.latitude, parseFloat(landmarkLat)),
+                    eq(landmarks.longitude, parseFloat(landmarkLon))
+                )
+            )
+            .get()
+
+        let internalLandmarkId: number;
+
+        if (existingLandmark) {
+            internalLandmarkId = existingLandmark.id;
+        } else {
+            // 新しいランドマークを作成
+            const newLandmark = await db.insert(landmarks).values({
+                name: landmarkName,
+                latitude: parseFloat(landmarkLat),
+                longitude: parseFloat(landmarkLon),
+                type: 'user_selected'
+            }).returning()
+
+            internalLandmarkId = newLandmark[0].id;
+        }
+
         // ashioto投稿を作成
         const newPost = await db.insert(ashioto).values({
             userId: user.spotifyId,
             trackId: spotifyTrackId,
-            landmarkId: parseInt(landmarkId),
+            landmarkId: internalLandmarkId,
             timestamp: new Date().toISOString(),
             comment: comment || null,
             isPublic: true,
         }).returning()
 
-        // 投稿詳細情報を返す
-        const postWithDetails = await db.select({
-            id: ashioto.id,
-            userId: ashioto.userId,
-            userName: users.displayName,
-            userAvatar: users.profileImageUrl,
-            trackName: tracks.trackName,
-            artistName: tracks.artistName,
-            albumName: tracks.albumName,
-            albumCover: tracks.albumImageUrl,
-            comment: ashioto.comment,
-            createdAt: ashioto.timestamp,
-            latitude: landmarks.latitude,
-            longitude: landmarks.longitude,
-            locationName: landmarks.name,
-        })
-        .from(ashioto)
-        .leftJoin(users, eq(ashioto.userId, users.spotifyId))
-        .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
-        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
-        .where(eq(ashioto.id, newPost[0].id))
-        .get()
+        return c.json({ success: true, postId: newPost[0].id })
 
-        return c.json(postWithDetails)
     } catch (error) {
         console.error('Post creation error:', error)
         return c.json({ error: 'Failed to create post' }, 500)
