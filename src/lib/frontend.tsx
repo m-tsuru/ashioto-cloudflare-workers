@@ -73,8 +73,8 @@ const MusicPost: FC<{ post: any }> = ({ post }) => {
 const LoginPrompt: FC = () => {
   return (
     <div class="login-prompt">
-      <h2>ashioto</h2>
-      <p>音楽と場所を共有するSNSプラットフォーム</p>
+      <h2>あしおと</h2>
+      <p>世界と音楽をむすびつける<br />わたしたちだけのサウンドトラック。</p>
       <a href="/api/auth" class="login-button">
         Spotifyでログイン
       </a>
@@ -85,7 +85,7 @@ const LoginPrompt: FC = () => {
 const PostForm: FC = () => {
   return (
     <div class="post-form" id="postForm" style="display: none;">
-      <h3>🐾あしあとをのこす</h3>
+      <h3>🐾あしおとをのこす</h3>
       <form id="musicPostForm">
         <div class="form-group" id="locationSelection" style="display: none;">
           <label>紐づける場所を選択してください</label>
@@ -116,7 +116,7 @@ const PostForm: FC = () => {
 
 frontend.get('/', async (c) => {
   return c.html(
-    <Layout title="Ashioto - 音楽と場所のSNS">
+    <Layout title="ホーム - あしおと">
       <div id="app">
         <Map />
         <BottomSheet>
@@ -131,7 +131,7 @@ frontend.get('/', async (c) => {
             </div>
             <PostForm />
             <div id="nearbyPosts">
-              <h3>📍 ちかくのあしあと</h3>
+              <h3>📍 ちかくのあしおと</h3>
               <div id="postsList"></div>
             </div>
           </div>
@@ -143,7 +143,7 @@ frontend.get('/', async (c) => {
             <button class="speed-dial-action" id="getCurrentLocationButton" title="更新">
               📍
             </button>
-            <button class="speed-dial-action" id="createPostButton" title="あしあと">
+            <button class="speed-dial-action" id="createPostButton" title="あしおと">
               🎵
             </button>
           </div>
@@ -159,11 +159,11 @@ frontend.get('/', async (c) => {
 // 自分の足跡ページ
 frontend.get('/footprints', async (c) => {
   return c.html(
-    <Layout title="あしあとをたどる - Ashioto">
+    <Layout title="あしおとをたどる - あしおと">
       <div id="footprints-app">
         <header class="page-header">
           <a href="/" class="back-button">← もどる</a>
-          <h1>🐾 あしあとをたどる</h1>
+          <h1>🐾 あしおとをたどる</h1>
         </header>
         <div class="page-content">
           <div id="loginSection">
@@ -183,7 +183,7 @@ frontend.get('/footprints', async (c) => {
 frontend.get('/user/:userId', async (c) => {
   const userId = c.req.param('userId')
   return c.html(
-    <Layout title={`ユーザープロフィール - Ashioto`}>
+    <Layout title={`ユーザープロフィール - あしおと`}>
       <div id="profile-app" data-user-id={userId}>
         <header class="page-header">
           <a href="/" class="back-button">← もどる</a>

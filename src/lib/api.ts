@@ -33,7 +33,7 @@ const client_secret = process.env.SPOTIFY_CLIENT_SECRET ?? ''
 const scope = process.env.SPOTIFY_SCOPE ?? ''
 const state = process.env.SPOTIFY_REDIRECT_STATE ?? ''
 
-const jwtAuth = async (c, next) => {
+const jwtAuth = async (c: any, next: any) => {
   const sessionToken = getCookie(c, 'session')
   const jwtSecret = c.env.JWT_SECRET || 'fallback-secret'
 

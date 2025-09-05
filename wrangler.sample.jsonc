@@ -17,7 +17,8 @@
     "SPOTIFY_CLIENT_SECRET": "your-spotify-client-secret",
     "SPOTIFY_REDIRECT_URI": "your-spotify-redirect-uri",
     "SPOTIFY_SCOPE": "your-spotify-scope",
-    "SPOTIFY_REDIRECT_STATE": "your-spotify-redirect-state"
+    "SPOTIFY_REDIRECT_STATE": "your-spotify-redirect-state",
+    "YOLP_ID": "your-yolp-id"
   },
   "compatibility_flags": [
     "nodejs_compat"
