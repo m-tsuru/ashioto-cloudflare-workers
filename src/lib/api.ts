@@ -750,7 +750,7 @@ api.get('/my-footprints', jwtAuth, async (c) => {
 })
 
 // あしあとの詳細を取得
-api.get('/ashioto/:ashiotoId', jwtAuth, async (c) => {
+api.get('/ashioto/:ashiotoId', async (c) => {
     const ashiotoId = c.req.param('ashiotoId')
     const db = createDb(c.env.DB)
 
@@ -785,11 +785,15 @@ api.get('/ashioto/:ashiotoId', jwtAuth, async (c) => {
         }
 
         // 公開設定のチェック
-        const currentUser = c.get('jwtPayload') as any
-        if (!postDetail.isPublic && postDetail.userId !== currentUser.spotifyId) {
+        let currentUser: any = null;
+        try {
+          currentUser = c.get('jwtPayload');
+        } catch {}
+        if (!postDetail.isPublic) {
+          if (!currentUser || postDetail.userId !== currentUser.spotifyId) {
             return c.json({ error: 'Access denied' }, 403)
+          }
         }
-
         return c.json(postDetail)
     } catch (error) {
         console.error('Post detail fetch error:', error)

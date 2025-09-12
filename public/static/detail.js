@@ -11,40 +11,18 @@ class DetailApp {
     const detailApp = document.getElementById("detail-app");
     this.ashiotoId = detailApp.dataset.ashiotoId;
 
-    await this.checkAuthStatus();
-  }
-
-  // 認証状態をチェック
-  async checkAuthStatus() {
+    // ログイン状態を取得（失敗してもOK）
     try {
-      console.log("認証状態をチェック中...");
-      const response = await fetch("/api/auth/me", {
-        credentials: "include",
-      });
-
+      const response = await fetch("/api/auth/me", { credentials: "include" });
       if (response.ok) {
         this.user = await response.json();
-        console.log("認証成功:", this.user);
-        this.showUserSection();
-        await this.loadPostDetail();
-      } else {
-        console.log("認証失敗:", response.status);
-        this.showLoginSection();
       }
-    } catch (error) {
-      console.error("認証チェック失敗:", error);
-      this.showLoginSection();
-    }
-  }
+    } catch {}
 
-  showLoginSection() {
-    document.getElementById("loginSection").style.display = "block";
-    document.getElementById("userSection").style.display = "none";
-  }
-
-  showUserSection() {
+    // 投稿詳細は必ず取得し、公開投稿は誰でも見れる
     document.getElementById("loginSection").style.display = "none";
     document.getElementById("userSection").style.display = "block";
+    await this.loadPostDetail();
   }
 
   // 投稿詳細を読み込み
@@ -187,17 +165,24 @@ class DetailApp {
 
         <!-- アクション -->
         <div class="detail-actions">
-          <button class="detail-action-btn" onclick="this.copyPostLink()">
+          <button class="detail-action-btn" id="copyLinkBtn">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-link-45deg" viewBox="0 0 16 16">
               <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
               <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
             </svg> リンクをコピー
           </button>
-          <button class="detail-action-btn" onclick="this.openInMap()">
+          <button class="detail-action-btn" id="tweetBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-twitter" viewBox="0 0 16 16">
+              <path d="M5.026 15c6.038 0 9.341-5.003 9.341-9.334 0-.14 0-.282-.009-.422A6.685 6.685 0 0 0 16 3.542a6.658 6.658 0 0 1-1.889.518 3.301 3.301 0 0 0 1.447-1.817 6.533 6.533 0 0 1-2.084.797A3.286 3.286 0 0 0 7.875 6.03a9.325 9.325 0 0 1-6.767-3.429 3.289 3.289 0 0 0 1.018 4.382A3.323 3.323 0 0 1 .64 6.575v.045a3.288 3.288 0 0 0 2.632 3.218 3.203 3.203 0 0 1-.865.115c-.212 0-.417-.021-.616-.061a3.293 3.293 0 0 0 3.067 2.277A6.588 6.588 0 0 1 .78 13.58a6.32 6.32 0 0 1-.78-.045A9.344 9.344 0 0 0 5.026 15z"/>
+            </svg> ツイート
+          </button>
+          <button class="detail-action-btn" id="mapBtn">
             🗺️ 地図で見る
           </button>
         </div>
       </div>
+
+
     `;
 
     // イベントリスナーを設定
@@ -207,20 +192,15 @@ class DetailApp {
   // 詳細ページのアクションを設定
   bindDetailActions(post) {
     // リンクをコピー
-    const copyLinkBtn = document.querySelector(
-      ".detail-actions .detail-action-btn"
-    );
+    const copyLinkBtn = document.getElementById("copyLinkBtn");
     if (copyLinkBtn) {
       copyLinkBtn.addEventListener("click", async () => {
         try {
           const postUrl = `${window.location.origin}/detail/${this.ashiotoId}`;
           await navigator.clipboard.writeText(postUrl);
-
-          // 成功フィードバック
           const originalText = copyLinkBtn.textContent;
           copyLinkBtn.textContent = "✔ コピー済み";
           copyLinkBtn.style.background = "#1db954";
-
           setTimeout(() => {
             copyLinkBtn.textContent = originalText;
             copyLinkBtn.style.background = "";
@@ -232,8 +212,34 @@ class DetailApp {
       });
     }
 
+    // ツイート
+    const tweetBtn = document.getElementById("tweetBtn");
+    if (tweetBtn) {
+      tweetBtn.addEventListener("click", () => {
+        const userName = post.userName;
+        const locationName = post.locationName;
+        const trackName = post.trackName;
+        const artistName = post.artistName;
+        const createdDate = new Date(post.createdAt);
+        const mmdd = `${createdDate.getMonth() + 1}/${createdDate.getDate()}`;
+        const hm = `${createdDate
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${createdDate
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+        const url = `${window.location.origin}/detail/${this.ashiotoId}`;
+        const text = `${userName} さんが ${locationName} の近くで『${trackName}（${artistName}）』を聞きました！(${mmdd} ${hm})\n${url}`;
+        const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(
+          text
+        )}`;
+        window.open(tweetUrl, "_blank");
+      });
+    }
+
     // 地図で見る
-    const mapBtn = document.querySelectorAll(".detail-action-btn")[1];
+    const mapBtn = document.getElementById("mapBtn");
     if (mapBtn) {
       mapBtn.addEventListener("click", () => {
         window.location.href = `/`;

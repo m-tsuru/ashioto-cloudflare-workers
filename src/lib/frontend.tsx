@@ -6,7 +6,7 @@ const frontend = new Hono();
 const Layout: FC<{ title: string; children?: any }> = ({ children, title }) => {
   return (
     <html lang="ja">
-      <head>
+      <head prefix="og: http://ogp.me/ns#">
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
@@ -15,6 +15,14 @@ const Layout: FC<{ title: string; children?: any }> = ({ children, title }) => {
           href="https://unpkg.com/leaflet/dist/leaflet.css"
         />
         <link rel="stylesheet" href="/static/styles.css" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@sasakulari" />
+        <meta name="twitter:creator" content="@sasakulari" />
+        <meta name="twitter:image" content="https://ashioto.sasakulab.com/static/og-image.png" data-next-head="" />
+        <meta property="og:url" content="https://ashioto.sasakulab.com/" />
+        <meta property="og:title" content="あしおと" />
+        <meta property="og:description" content="Connecting the world and music—our very own soundtrack." />
+        <meta property="og:image" content="https://ashioto.sasakulab.com/static/og-image.png" />
       </head>
       <body>
         {children}
@@ -329,13 +337,13 @@ frontend.get("/user/:userId", async (c) => {
 frontend.get("/detail/:ashiotoId", async (c) => {
   const ashiotoId = c.req.param("ashiotoId");
   return c.html(
-    <Layout title={`ログ詳細 - あしおと`}>
+    <Layout title={`あしおとの詳細 - あしおと`}>
       <div id="detail-app" data-ashioto-id={ashiotoId}>
         <header class="page-header">
           <a href="/" class="back-button">
             ← もどる
           </a>
-          <h1>ログ詳細</h1>
+          <h1>あしおとの詳細</h1>
         </header>
         <div class="page-content">
           <div id="loginSection">
