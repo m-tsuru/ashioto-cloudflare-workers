@@ -1218,6 +1218,32 @@ button[type="submit"]:hover {
     justify-content: center;
   }
 
+  /* 詳細ページのモバイル対応 */
+  .detail-card {
+    padding: 16px;
+  }
+
+  .detail-album-cover {
+    width: 120px;
+    height: 120px;
+  }
+
+  .detail-music-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .detail-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .detail-action-btn {
+    width: 100%;
+  }
+
   .timeline-item {
     flex-direction: column;
     gap: 8px;
@@ -1226,4 +1252,248 @@ button[type="submit"]:hover {
   .timeline-date {
     min-width: auto;
   }
+}
+
+/* 詳細ページのスタイル */
+.detail-card {
+  max-width: 600px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  overflow: hidden;
+}
+
+.detail-user-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-user-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #1db954;
+}
+
+.detail-user-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.detail-user-name-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.detail-user-name-link:hover {
+  color: #1db954;
+}
+
+.my-post-badge {
+  background: #1db954;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.detail-timestamp {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.detail-date,
+.detail-time {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-music-section,
+.detail-location-section,
+.detail-comment-section {
+  margin-bottom: 24px;
+}
+
+.detail-music-section h4,
+.detail-location-section h4,
+.detail-comment-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-music-card {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.detail-album-cover {
+  width: 150px;
+  height: 150px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.detail-track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-spotify-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.detail-spotify-link:hover .detail-track-name {
+  color: #1db954;
+}
+
+.detail-track-name {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.detail-artist-name {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-album-name {
+  margin: 0;
+  font-size: 14px;
+  color: #999;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-location-card {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.detail-location-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.detail-coordinates {
+  font-size: 13px;
+  color: #666;
+  font-family: "Monaco", "Menlo", monospace;
+}
+
+.detail-comment-card {
+  padding: 16px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.detail-action-btn {
+  flex: 1;
+  padding: 14px 20px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.detail-action-btn:hover {
+  background: #e9ecef;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.detail-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.detail-error h3 {
+  margin-bottom: 16px;
+  font-size: 20px;
+  color: #333;
+}
+
+.detail-error p {
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.error-action-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #1db954;
+  color: white;
+  text-decoration: none;
+  border-radius: 24px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.error-action-btn:hover {
+  background: #1ed760;
 }

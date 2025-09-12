@@ -749,6 +749,54 @@ api.get('/my-footprints', jwtAuth, async (c) => {
     }
 })
 
+// あしあとの詳細を取得
+api.get('/ashioto/:ashiotoId', jwtAuth, async (c) => {
+    const ashiotoId = c.req.param('ashiotoId')
+    const db = createDb(c.env.DB)
+
+    try {
+        const postDetail = await db
+        .select({
+            id: ashioto.id,
+            userId: ashioto.userId,
+            userName: users.displayName,
+            userAvatar: users.profileImageUrl,
+            spotifyTrackId: tracks.spotifyTrackId,
+            trackName: tracks.trackName,
+            artistName: tracks.artistName,
+            albumName: tracks.albumName,
+            albumCover: tracks.albumImageUrl,
+            comment: ashioto.comment,
+            createdAt: ashioto.timestamp,
+            latitude: landmarks.latitude,
+            longitude: landmarks.longitude,
+            locationName: landmarks.name,
+            isPublic: ashioto.isPublic,
+        })
+        .from(ashioto)
+        .leftJoin(users, eq(ashioto.userId, users.spotifyId))
+        .leftJoin(tracks, eq(ashioto.trackId, tracks.spotifyTrackId))
+        .leftJoin(landmarks, eq(ashioto.landmarkId, landmarks.id))
+        .where(eq(ashioto.id, Number(ashiotoId)))
+        .get()
+
+        if (!postDetail) {
+            return c.json({ error: 'Post not found' }, 404)
+        }
+
+        // 公開設定のチェック
+        const currentUser = c.get('jwtPayload') as any
+        if (!postDetail.isPublic && postDetail.userId !== currentUser.spotifyId) {
+            return c.json({ error: 'Access denied' }, 403)
+        }
+
+        return c.json(postDetail)
+    } catch (error) {
+        console.error('Post detail fetch error:', error)
+        return c.json({ error: 'Failed to fetch post detail' }, 500)
+    }
+})
+
 // ユーザー情報を取得
 api.get('/user/:userId', jwtAuth, async (c) => {
     const targetUserId = c.req.param('userId')
